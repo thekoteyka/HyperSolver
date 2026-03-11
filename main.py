@@ -2,11 +2,10 @@ import os
 import subprocess
 import base64
 import tkinter as tk
-import requests
-import json
 import pyperclip
 import re
-import openai
+from openai import OpenAI
+from typing import Literal
 
 MODELS = {
     '2.5 flash': 'google/gemini-2.5-flash', # Default $2.5
@@ -14,8 +13,13 @@ MODELS = {
     '3.1 pro': 'google/gemini-3.1-pro-preview', # expensive $14
     '2.5 pro': 'google/gemini-2.5-pro' # $11
 }
+REASONING_EFFORTS = Literal[
+    'minimal', 'low', 'medium', 'high', 'none'
+]
+
 
 MODELNOW = '3 flash'
+REASONING: REASONING_EFFORTS = 'none'
 
 
 def renderOutput(text):
@@ -47,17 +51,19 @@ def takeScreenshot():
         return (e, )
     
 def solve(image: str):
-    try:
-        return requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": open('keyz').readline(),
-                "Content-Type": "application/json",
-            },
-            data=json.dumps({
-                "model": MODELS[MODELNOW],
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1/",
+        api_key=open('keyz').readline(),
+    )
 
-                "messages": [
+    if REASONING == 'none': 
+        reasosing_effort = None
+    else:
+        reasosing_effort = REASONING
+
+    response = client.chat.completions.create(
+        model = MODELS[MODELNOW],
+        messages = [
                 {
                     "role": "user",
                     "content": [
@@ -70,16 +76,14 @@ def solve(image: str):
                         "image_url": {
                         "url": f"data:image/png;base64,{image}"
                         }
-                    },
+                    }
                     ]
                 }
                 ],
-
-                "reasoning_effort": "high",
-            })
-        )
-    except Exception as e:
-        return (e, )
+        reasoning_effort = reasosing_effort,
+        # extra_body = {"reasoning": {"enabled": True}}
+    )
+    return response.choices[0].message.content
     
 def copyAnswer(solution: str):
     try:
@@ -93,13 +97,15 @@ def main():
     screenshot = takeScreenshot()
     if isinstance(screenshot, tuple):
         return
-    
-    solution = solve(screenshot)
-    if isinstance(solution, tuple):
-        renderOutput(solution[0])
-    else:
-        copyAnswer(solution.json()["choices"][0]["message"]["content"])
-        renderOutput(solution.json()["choices"][0]["message"]["content"])
+    try:
+        solution = solve(screenshot)
+    except Exception as e:
+        copyAnswer("Error")
+        renderOutput(e)
+
+    if solution is not None:
+        copyAnswer(solution)
+        renderOutput(solution)
     
 if __name__ == "__main__":
     main()
