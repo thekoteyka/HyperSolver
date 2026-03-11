@@ -43,7 +43,7 @@ def renderOutput(text: str, customClosingDelay: int | None = None):
     scrollbar = tk.Scrollbar(root, command=text_widget.yview)
     scrollbar.pack(side="right", fill="y")
     text_widget.config(yscrollcommand=scrollbar.set)
-    Thread(target=terminateRoot, args=(root, customClosingDelay)).run()
+    Thread(target=terminateRoot, args=(root, customClosingDelay or CLOSING_DELAY)).run()
     root.mainloop()
 
 def takeScreenshot():
@@ -92,6 +92,7 @@ def solve(image: str):
         reasoning_effort = reasosing_effort,
         # extra_body = {"reasoning": {"enabled": True}}
     )
+    # print(response.usage)
     return response.choices[0].message.content
     
 def copyAnswer(solution: str):
@@ -108,16 +109,29 @@ def openFile(path: str) -> None:
         subprocess.call(['open', path]) 
     
 def checkKeyzFile() -> None:
+    """
+    checks if keyz file is present and have correct key in it
+    """
     keyzPath = f"{currentDir}/keyz"
-    if not os.path.exists(keyzPath):
-        # os.system(f"touch {keyzPath}")
-        with open(keyzPath, 'x') as f:
-            f.write('< INSERT YOUR API KEY FROM OPENROUTER HERE AND RESTART >')
-        openFile(keyzPath)
-        s = f"Insert your api token from openrouter into `keyz` file. It should open automatically ( {keyzPath} )"
-        print(s)
-        renderOutput(s)
-        exit()
+
+    if os.path.exists(keyzPath):
+        with open(keyzPath) as f:
+            stream = f.readline()
+
+        if stream.startswith('sk-or-'):
+            if len(stream) == 73:
+                return
+            if len(stream.strip()) == 73:
+                with open(keyzPath, 'w') as f:
+                    f.write(stream.strip())
+                return
+    
+    with open(keyzPath, 'w') as f:
+        f.write('< INSERT YOUR API KEY FROM OPENROUTER HERE AND RESTART >')
+    openFile(keyzPath)
+    s = f"Insert your api token from openrouter into `keyz` file. It should open automatically ( {keyzPath} )"
+    print(s)
+    exit()
 
 
 def main():
