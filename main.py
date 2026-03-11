@@ -5,6 +5,7 @@ import tkinter as tk
 import pyperclip
 import re
 from openai import OpenAI
+from openai.types.chat import ChatCompletion
 from typing import Literal
 from threading import Thread
 
@@ -20,7 +21,7 @@ REASONING_EFFORTS = Literal[
 
 
 MODELNOW = '3 flash'
-REASONING: REASONING_EFFORTS = 'none'
+REASONING: REASONING_EFFORTS = 'low'
 CLOSING_DELAY: int = 20   # seconds
 
 
@@ -29,12 +30,30 @@ currentDir = os.path.dirname(os.path.abspath(__file__))
 def terminateRoot(root, delay: int):
     root.after(delay*1000, lambda: root.destroy())
 
-def renderOutput(text: str, customClosingDelay: int | None = None):
+def makeTitle(response: ChatCompletion) -> str | None:
+    usage = response.usage
+    if usage is None:
+        return None
+    completionTokens = usage.completion_tokens
+    reasoningTokens = usage.completion_tokens_details.reasoning_tokens if usage.completion_tokens_details else 0
+    try:
+        cost = float(usage.cost)  # type: ignore
+    except:
+        cost = None
+    
+    title = f"VISIBLE: {completionTokens} | REASONING: {reasoningTokens or '?'}"
+    if isinstance(cost, float):
+        title += f" | ${round(cost, 3)}"
+
+    return title
+    
+
+def renderOutput(text: str, customClosingDelay: int | None = None, title: str | None = None):
     """
     Show text in tkinter window and close it after `CLOSING_DELAY` by default, or `customClosingDelay` if specified
     """
     root = tk.Tk()
-    root.title("Solution")
+    root.title(title or "Solution")
     root.iconify()
     text_widget = tk.Text(root, wrap="word", font=("Arial", 14))
     text_widget.insert("1.0", text)
@@ -93,7 +112,7 @@ def solve(image: str):
         # extra_body = {"reasoning": {"enabled": True}}
     )
     # print(response.usage)
-    return response.choices[0].message.content
+    return response
     
 def copyAnswer(solution: str):
     try:
@@ -140,14 +159,16 @@ def main():
     if isinstance(screenshot, tuple):
         return
     try:
-        solution = solve(screenshot)
+        response = solve(screenshot)
     except Exception as e:
         copyAnswer("Error")
         renderOutput(str(e))
 
+    solution = response.choices[0].message.content
+
     if solution is not None:
         copyAnswer(solution)
-        renderOutput(solution)
+        renderOutput(solution, title=makeTitle(response))
     
 if __name__ == "__main__":
     checkKeyzFile()
