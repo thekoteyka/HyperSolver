@@ -6,6 +6,7 @@ import pyperclip
 import re
 from openai import OpenAI
 from typing import Literal
+from threading import Thread
 
 MODELS = {
     '2.5 flash': 'google/gemini-2.5-flash', # Default $2.5
@@ -20,11 +21,20 @@ REASONING_EFFORTS = Literal[
 
 MODELNOW = '3 flash'
 REASONING: REASONING_EFFORTS = 'none'
+CLOSING_DELAY: int = 20   # seconds
 
 
-def renderOutput(text):
+currentDir = os.path.dirname(os.path.abspath(__file__))
+
+def terminateRoot(root, delay: int):
+    root.after(delay*1000, lambda: root.destroy())
+
+def renderOutput(text: str, customClosingDelay: int | None = None):
+    """
+    Show text in tkinter window and close it after `CLOSING_DELAY` by default, or `customClosingDelay` if specified
+    """
     root = tk.Tk()
-    root.title("Solver")
+    root.title("Solution")
     root.iconify()
     text_widget = tk.Text(root, wrap="word", font=("Arial", 14))
     text_widget.insert("1.0", text)
@@ -33,18 +43,17 @@ def renderOutput(text):
     scrollbar = tk.Scrollbar(root, command=text_widget.yview)
     scrollbar.pack(side="right", fill="y")
     text_widget.config(yscrollcommand=scrollbar.set)
+    Thread(target=terminateRoot, args=(root, customClosingDelay)).run()
     root.mainloop()
 
 def takeScreenshot():
-    currentDir = os.path.dirname(os.path.abspath(__file__))
     screenPath = f"{currentDir}/screen.png"
 
     if os.path.exists(screenPath):
         os.remove(screenPath)
-    savePath = os.path.join(currentDir, "screen.png")
     
     try:
-        subprocess.run(["screencapture", "-i", savePath], check=True)
+        subprocess.run(["screencapture", "-i", screenPath], check=True)
         with open(screenPath, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
     except Exception as e:
@@ -91,6 +100,25 @@ def copyAnswer(solution: str):
         pyperclip.copy(re.findall(maket, solution)[-1])
     except:
         return
+    
+def openFile(path: str) -> None:
+    if os.name == 'nt':
+        os.startfile(path)
+    else:
+        subprocess.call(['open', path]) 
+    
+def checkKeyzFile() -> None:
+    keyzPath = f"{currentDir}/keyz"
+    if not os.path.exists(keyzPath):
+        # os.system(f"touch {keyzPath}")
+        with open(keyzPath, 'x') as f:
+            f.write('< INSERT YOUR API KEY FROM OPENROUTER HERE AND RESTART >')
+        openFile(keyzPath)
+        s = f"Insert your api token from openrouter into `keyz` file. It should open automatically ( {keyzPath} )"
+        print(s)
+        renderOutput(s)
+        exit()
+
 
 def main():
     pyperclip.copy("")
@@ -101,11 +129,12 @@ def main():
         solution = solve(screenshot)
     except Exception as e:
         copyAnswer("Error")
-        renderOutput(e)
+        renderOutput(str(e))
 
     if solution is not None:
         copyAnswer(solution)
         renderOutput(solution)
     
 if __name__ == "__main__":
+    checkKeyzFile()
     main()
