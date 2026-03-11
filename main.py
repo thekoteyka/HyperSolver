@@ -6,7 +6,6 @@ import requests
 import json
 import pyperclip
 import re
-import openai
 
 MODELS = {
     '2.5 flash': 'google/gemini-2.5-flash', # Default $2.5
