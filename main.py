@@ -6,6 +6,7 @@ import requests
 import json
 import pyperclip
 import re
+import openai
 
 MODELS = {
     '2.5 flash': 'google/gemini-2.5-flash', # Default $2.5
@@ -19,7 +20,7 @@ screenPath = f"{os.path.dirname(os.path.abspath(__file__))}/screen.png"
 
 def renderOutput(text):
     root = tk.Tk()
-    root.title("Reshalo")
+    root.title("Solver")
     root.iconify()
     text_widget = tk.Text(root, wrap="word", font=("Arial", 14))
     text_widget.insert("1.0", text)
