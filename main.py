@@ -15,7 +15,7 @@ MODELS = {
 }
 
 MODELNOW = '3 flash'
-screenPath = f"{os.path.dirname(os.path.abspath(__file__))}/screen.png"
+
 
 def renderOutput(text):
     root = tk.Tk()
@@ -31,9 +31,11 @@ def renderOutput(text):
     root.mainloop()
 
 def takeScreenshot():
+    currentDir = os.path.dirname(os.path.abspath(__file__))
+    screenPath = f"{currentDir}/screen.png"
+
     if os.path.exists(screenPath):
         os.remove(screenPath)
-    currentDir = os.path.dirname(os.path.abspath(__file__))
     savePath = os.path.join(currentDir, "screen.png")
     
     try:
