@@ -10,7 +10,7 @@ from typing import Literal
 from threading import Thread
 
 modelsApiNames = {
-    '2.5 flash': 'google/gemini-2.5-flash', # Default $2.5
+  '2.5 flash': 'google/gemini-2.5-flash', # Default $2.5
     '3 flash': 'google/gemini-3-flash-preview', # $3
     '3.1 pro': 'google/gemini-3.1-pro-preview', # expensive $14
     '2.5 pro': 'google/gemini-2.5-pro' # $11
@@ -24,10 +24,11 @@ reasoningEfforts = Literal[
 ]
 
 
-selectedModel: modelsAvailable = '3 flash'
+selectedModel: modelsAvailable   = '3 flash'
 reasoningLevel: reasoningEfforts = 'low'
 closingDelay: int = 20   # seconds
 
+bypassCheckKeyz = False
 
 currentDir = os.path.dirname(os.path.abspath(__file__))
 
@@ -78,7 +79,9 @@ def getScreenshot() -> str:
     if os.path.exists(screenPath):
         os.remove(screenPath)
     try:
-        return _takeScreenshot(screenPath)
+        scr = _takeScreenshot(screenPath)
+        os.remove(screenPath)
+        return scr
     except FileNotFoundError:  # probably pressed esc
         exit()
     except Exception as e:
@@ -102,30 +105,30 @@ def solve(image: str):
     )
 
     if reasoningLevel == 'none': 
-        reasosing_effort = None
+        reasoning_effort = None
     else:
-        reasosing_effort = reasoningLevel
+        reasoning_effort = reasoningLevel
 
     response = client.chat.completions.create(
         model = modelsApiNames[selectedModel],
         messages = [
+            {
+                "role": "user",
+                "content": [
                 {
-                    "role": "user",
-                    "content": [
-                    {
-                        "type": "text",
-                        "text": "Реши задачу на фото. Строго запрещено использовать LaTeX math mode. В конце напиши \"Ответ: <ответ>\". Если дробь возможно сделать десятичной -  сделай"
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
+                    "type": "text",
+                    "text": "Реши задачу на фото. Строго запрещено использовать LaTeX math mode. В конце напиши \"Ответ: <ответ>\". Если дробь возможно сделать десятичной -  сделай"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
                         "url": f"data:image/png;base64,{image}"
-                        }
                     }
-                    ]
                 }
-                ],
-        reasoning_effort = reasosing_effort,
+                ]
+            }
+        ],
+        reasoning_effort = reasoning_effort
     )
     return response
     
@@ -185,5 +188,6 @@ def main():
         renderOutput(solution, title=makeTitle(response))
     
 if __name__ == "__main__":
-    checkKeyzFile()
+    if not bypassCheckKeyz:
+        checkKeyzFile()
     main()
