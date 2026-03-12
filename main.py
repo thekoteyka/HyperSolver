@@ -9,20 +9,24 @@ from openai.types.chat import ChatCompletion
 from typing import Literal
 from threading import Thread
 
-MODELS = {
+modelsApiNames = {
     '2.5 flash': 'google/gemini-2.5-flash', # Default $2.5
     '3 flash': 'google/gemini-3-flash-preview', # $3
     '3.1 pro': 'google/gemini-3.1-pro-preview', # expensive $14
     '2.5 pro': 'google/gemini-2.5-pro' # $11
 }
-REASONING_EFFORTS = Literal[
+modelsAvailable = Literal[
+    '2.5 flash', '3 flash', '3.1 pro', '2.5 pro'
+]
+
+reasoningEfforts = Literal[
     'minimal', 'low', 'medium', 'high', 'none'
 ]
 
 
-MODELNOW = '3 flash'
-REASONING: REASONING_EFFORTS = 'low'
-CLOSING_DELAY: int = 20   # seconds
+selectedModel: modelsAvailable = '3 flash'
+reasoningLevel: reasoningEfforts = 'low'
+closingDelay: int = 20   # seconds
 
 
 currentDir = os.path.dirname(os.path.abspath(__file__))
@@ -62,10 +66,10 @@ def renderOutput(text: str, customClosingDelay: int | None = None, title: str | 
     scrollbar = tk.Scrollbar(root, command=text_widget.yview)
     scrollbar.pack(side="right", fill="y")
     text_widget.config(yscrollcommand=scrollbar.set)
-    Thread(target=terminateRoot, args=(root, customClosingDelay or CLOSING_DELAY)).run()
+    Thread(target=terminateRoot, args=(root, customClosingDelay or closingDelay)).run()
     root.mainloop()
 
-def takeScreenshot():
+def takeScreenshot() -> str:
     screenPath = f"{currentDir}/screen.png"
 
     if os.path.exists(screenPath):
@@ -75,8 +79,11 @@ def takeScreenshot():
         subprocess.run(["screencapture", "-i", screenPath], check=True)
         with open(screenPath, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
+        # os.remove(screenPath)
     except Exception as e:
-        return (e, )
+        print(f"Error taking screenshot:\n{e}")
+        renderOutput(str(e))
+        exit()
     
 def solve(image: str):
     client = OpenAI(
@@ -84,13 +91,13 @@ def solve(image: str):
         api_key=open('keyz').readline(),
     )
 
-    if REASONING == 'none': 
+    if reasoningLevel == 'none': 
         reasosing_effort = None
     else:
-        reasosing_effort = REASONING
+        reasosing_effort = reasoningLevel
 
     response = client.chat.completions.create(
-        model = MODELS[MODELNOW],
+        model = modelsApiNames[selectedModel],
         messages = [
                 {
                     "role": "user",
