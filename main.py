@@ -98,6 +98,14 @@ def _takeScreenshot(screenPath: str) -> str:
     with open(screenPath, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
     
+def askModel(client: OpenAI, messages, reasoning_effort: Literal['minimal', 'low', 'medium', 'high'] | None) -> ChatCompletion:
+    response = client.chat.completions.create(
+        model = modelsApiNames[selectedModel],
+        messages = messages,
+        reasoning_effort = reasoning_effort
+    )
+    return response
+    
 def solve(image: str):
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1/",
@@ -109,28 +117,25 @@ def solve(image: str):
     else:
         reasoning_effort = reasoningLevel
 
-    response = client.chat.completions.create(
-        model = modelsApiNames[selectedModel],
-        messages = [
+    messages = [
+        {
+            "role": "user",
+            "content": [
             {
-                "role": "user",
-                "content": [
-                {
-                    "type": "text",
-                    "text": "Реши задачу на фото. Строго запрещено использовать LaTeX math mode. В конце напиши \"Ответ: <ответ>\". Если дробь возможно сделать десятичной -  сделай"
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/png;base64,{image}"
-                    }
+                "type": "text",
+                "text": "Реши задачу на фото. Строго запрещено использовать LaTeX math mode. В конце напиши \"Ответ: <ответ>\". Если дробь возможно сделать десятичной -  сделай"
+            },
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/png;base64,{image}"
                 }
-                ]
             }
-        ],
-        reasoning_effort = reasoning_effort
-    )
-    return response
+            ]
+        }
+    ],
+
+    return askModel(client, messages, reasoning_effort)
     
 def copyAnswer(solution: str):
     try:
