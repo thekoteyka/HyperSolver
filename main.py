@@ -69,21 +69,31 @@ def renderOutput(text: str, customClosingDelay: int | None = None, title: str | 
     Thread(target=terminateRoot, args=(root, customClosingDelay or closingDelay)).run()
     root.mainloop()
 
-def takeScreenshot() -> str:
+def getScreenshot() -> str:
+    """
+    Gets screenshot & handles errors. Returns base64 string of the image
+    """
     screenPath = f"{currentDir}/screen.png"
 
     if os.path.exists(screenPath):
         os.remove(screenPath)
-    
     try:
-        subprocess.run(["screencapture", "-i", screenPath], check=True)
-        with open(screenPath, "rb") as f:
-            return base64.b64encode(f.read()).decode("utf-8")
-        # os.remove(screenPath)
+        return _takeScreenshot(screenPath)
+    except FileNotFoundError:  # probably pressed esc
+        exit()
     except Exception as e:
         print(f"Error taking screenshot:\n{e}")
-        renderOutput(str(e))
+        renderOutput(str(e), customClosingDelay=45, title="Error")
         exit()
+
+def _takeScreenshot(screenPath: str) -> str:
+    """
+    Directly takes a screenshot and returns it as a base64 string
+    """
+    subprocess.run(["screencapture", "-i", screenPath], check=True)
+
+    with open(screenPath, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
     
 def solve(image: str):
     client = OpenAI(
@@ -116,9 +126,7 @@ def solve(image: str):
                 }
                 ],
         reasoning_effort = reasosing_effort,
-        # extra_body = {"reasoning": {"enabled": True}}
     )
-    # print(response.usage)
     return response
     
 def copyAnswer(solution: str):
@@ -162,9 +170,8 @@ def checkKeyzFile() -> None:
 
 def main():
     pyperclip.copy("")
-    screenshot = takeScreenshot()
-    if isinstance(screenshot, tuple):
-        return
+    screenshot: str = getScreenshot()
+
     try:
         response = solve(screenshot)
     except Exception as e:
