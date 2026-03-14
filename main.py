@@ -133,8 +133,7 @@ def solve(image: str):
             }
             ]
         }
-    ],
-
+    ]
     return askModel(client, messages, reasoning_effort)
     
 def copyAnswer(solution: str):
@@ -196,3 +195,4 @@ if __name__ == "__main__":
     if not bypassCheckKeyz:
         checkKeyzFile()
     main()
+
