@@ -8,6 +8,15 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletion
 from typing import Literal
 from threading import Thread
+import pyautogui
+
+
+
+"""
+TODO:
+curl -X GET "https://openrouter.ai/api/v1/key" \
+  -H "Authorization: Bearer ..."
+"""
 
 modelsApiNames = {
   '2.5 flash': 'google/gemini-2.5-flash', # Default $2.5
@@ -25,8 +34,10 @@ reasoningEfforts = Literal[
 
 
 selectedModel: modelsAvailable   = '3 flash'
-reasoningLevel: reasoningEfforts = 'low'
+reasoningLevel: reasoningEfforts = 'high'
 closingDelay: int = 20   # seconds
+soundWhenDone: bool = True # macos only
+autoSubmitAnswer: bool = True # macos only
 
 bypassCheckKeyz = False
 
@@ -134,7 +145,14 @@ def solve(image: str):
             ]
         }
     ]
+
     return askModel(client, messages, reasoning_effort)
+
+def getSystem() -> str:
+    if os.name == 'nt':
+        return "windows"
+    else:
+        return "macos"
     
 def copyAnswer(solution: str):
     try:
@@ -144,10 +162,10 @@ def copyAnswer(solution: str):
         return
     
 def openFile(path: str) -> None:
-    if os.name == 'nt':
-        os.startfile(path)
+    if getSystem() == "windows":
+        os.startfile(path) # type: ignore
     else:
-        subprocess.call(['open', path]) 
+        subprocess.call(['open', path])
     
 def checkKeyzFile() -> None:
     """
@@ -188,11 +206,22 @@ def main():
     solution = response.choices[0].message.content
 
     if solution is not None:
+        if solution.endswith('.'):
+            solution = solution[:-1]
         copyAnswer(solution)
+        if soundWhenDone and getSystem() == "macos":
+            os.system('afplay /System/Library/Sounds/Tink.aiff')
+        if autoSubmitAnswer and getSystem() == "macos":
+            pyautogui.keyDown('command')
+            pyautogui.sleep(0.1)
+            pyautogui.press('v')
+            pyautogui.keyUp('command')
+            pyautogui.press('tab')
+            pyautogui.press('space')
+
         renderOutput(solution, title=makeTitle(response))
     
 if __name__ == "__main__":
     if not bypassCheckKeyz:
         checkKeyzFile()
     main()
-
