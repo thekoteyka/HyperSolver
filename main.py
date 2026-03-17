@@ -20,13 +20,13 @@ curl -X GET "https://openrouter.ai/api/v1/key" \
 """
 
 modelsApiNames = {
-  '2.5 flash': 'google/gemini-2.5-flash', # Default $2.5
-    '3 flash': 'google/gemini-3-flash-preview', # $3
-    '3.1 pro': 'google/gemini-3.1-pro-preview', # expensive $14
-    '2.5 pro': 'google/gemini-2.5-pro' # $11
+  '2.5 flash': 'google/gemini-2.5-flash', # $2.5 I think better to use 3 flash for $0.5 more
+    '3 flash': 'google/gemini-3-flash-preview', # $3 Good for everething
+    '3.1 pro': 'google/gemini-3.1-pro-preview', # $14 Expensive
+    '3 flash lite': 'google/gemini-3.1-flash-lite-preview', # $1.75 very quick, good for easy problems
 }
 modelsAvailable = Literal[
-    '2.5 flash', '3 flash', '3.1 pro', '2.5 pro'
+    '2.5 flash', '3 flash lite', '3 flash', '3.1 pro'
 ]
 
 reasoningEfforts = Literal[
@@ -34,17 +34,19 @@ reasoningEfforts = Literal[
 ]
 
 
-selectedModel: modelsAvailable   = '3 flash'
+selectedModel: modelsAvailable   = '3 flash lite'
 reasoningLevel: reasoningEfforts = 'minimal'
-closingDelay: int = 1   # seconds
+closingDelay: int = 1   # seconds | Window wont be shown if autoSubmitAnswer enabled
 soundWhenDone: int|bool = True # macos only
-autoSubmitAnswer: int|bool = 1 # macos only
-loopSolving: int|bool = 1
+autoSubmitAnswer: int|bool = 1 # macos only | Also auto presses continue on trenings | Removes tkinter window with answer if enabled
+loopSolving: int|bool = 1 # After solving the problem, automatically start the script again. To exit press esc when choosing area for screenshot
 
-bypassCheckKeyz = False
 
-# with caution; to stop the loop put mouse in left upper corner
-autoScreenshot: int|bool = 1 # whole display screenshot
+bypassCheckKeyz = False # For whaever reason you might want to bypass check of keyz file
+
+# Whole display screenshot insted of area screenshot
+# If used with loopSolving enabled, to stop the loop put mouse in left upper corner or terminate the script
+autoScreenshot: int|bool = 1
 
 
 currentDir = os.path.dirname(os.path.abspath(__file__))
