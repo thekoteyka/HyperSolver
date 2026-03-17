@@ -11,7 +11,29 @@ from threading import Thread
 from pynput.keyboard import Key, Controller
 from pynput.mouse import Controller as MouseController
 import time
+import keyring
+import Quartz
+import time
+import json
 
+from settings import modelsApiNames, modelsAvailable, reasoningEfforts
+
+ACCESSES = Literal['settings']
+def access(mode:Literal['get', 'set', 'del'], var:ACCESSES, to:str|None=None):
+    """Access to global variables. Stored in system keyring"""
+    APP_NAME = '_HYPERSOLVER'
+    if mode == 'get':
+        return keyring.get_password(APP_NAME, var)
+    elif mode == 'set':
+        if to is None:
+            print("Value to set must be provided")
+            return
+        keyring.set_password(APP_NAME, var, to)
+    elif mode == 'del':
+        try:
+            keyring.delete_password(APP_NAME, var)
+        except:
+            pass
 
 """
 TODO:
@@ -19,34 +41,51 @@ curl -X GET "https://openrouter.ai/api/v1/key" \
   -H "Authorization: Bearer ..."
 """
 
-modelsApiNames = {
-  '2.5 flash': 'google/gemini-2.5-flash', # $2.5 I think better to use 3 flash for $0.5 more
-    '3 flash': 'google/gemini-3-flash-preview', # $3 Good for everething
-    '3.1 pro': 'google/gemini-3.1-pro-preview', # $14 Expensive
-    '3 flash lite': 'google/gemini-3.1-flash-lite-preview', # $1.75 very quick, good for easy problems
-}
-modelsAvailable = Literal[
-    '2.5 flash', '3 flash lite', '3 flash', '3.1 pro'
-]
+# modelsApiNames = {
+#   '2.5 flash': 'google/gemini-2.5-flash', # $2.5 I think better to use 3 flash for $0.5 more
+#     '3 flash': 'google/gemini-3-flash-preview', # $3 Good for everething
+#     '3.1 pro': 'google/gemini-3.1-pro-preview', # $14 Expensive
+#     '3 flash lite': 'google/gemini-3.1-flash-lite-preview', # $1.75 very quick, good for easy problems
+# }
+# modelsAvailable = Literal[
+#     '2.5 flash', '3 flash lite', '3 flash', '3.1 pro'
+# ]
+# reasoningEfforts = Literal[
+#     'minimal', 'low', 'medium', 'high', 'none'
+# ]
 
-reasoningEfforts = Literal[
-    'minimal', 'low', 'medium', 'high', 'none'
-]
+SETTINGS = access('get', 'settings')
+if SETTINGS is None:
+    from settings import defaultSettings
+    SETTINGS = defaultSettings
+else:
+    SETTINGS = json.loads(SETTINGS)
+
+"""
+TO EDIT SETTINGS RUN WITH PRESSED LEFT SHIFT AND LEFT CTRL
+"""
+
+selectedModel: modelsAvailable = SETTINGS['selectedModel']
+reasoningLevel: reasoningEfforts = SETTINGS['reasoningLevel']
+closingDelay: int = SETTINGS['closingDelay']   # seconds | Window wont be shown if autoSubmitAnswer enabled
+soundWhenDone: bool = SETTINGS['soundWhenDone']
+autoSubmitAnswer: bool = SETTINGS['autoSubmitAnswer'] # Also auto presses continue on trenings | Removes tkinter window with answer if enabled
+loopSolving: int|bool = SETTINGS['loopSolving']
+autoScreenshot: int|bool = SETTINGS['autoScreenshot']
 
 
-selectedModel: modelsAvailable   = '3 flash lite'
-reasoningLevel: reasoningEfforts = 'minimal'
-closingDelay: int = 1   # seconds | Window wont be shown if autoSubmitAnswer enabled
-soundWhenDone: int|bool = True # macos only
-autoSubmitAnswer: int|bool = 1 # macos only | Also auto presses continue on trenings | Removes tkinter window with answer if enabled
-loopSolving: int|bool = 1 # After solving the problem, automatically start the script again. To exit press esc when choosing area for screenshot
+# selectedModel: modelsAvailable   = '3 flash lite'
+# reasoningLevel: reasoningEfforts = 'minimal'
+# closingDelay: int = 1   # seconds | Window wont be shown if autoSubmitAnswer enabled
+# soundWhenDone: int|bool = True
+# autoSubmitAnswer: int|bool = 1 # Also auto presses continue on trenings | Removes tkinter window with answer if enabled
+# loopSolving: int|bool = 1 # After solving the problem, automatically start the script again. To exit press esc when choosing area for screenshot
 
 
 bypassCheckKeyz = False # For whaever reason you might want to bypass check of keyz file
 
 # Whole display screenshot insted of area screenshot
 # If used with loopSolving enabled, to stop the loop put mouse in left upper corner or terminate the script
-autoScreenshot: int|bool = 1
 
 
 currentDir = os.path.dirname(os.path.abspath(__file__))
@@ -204,7 +243,28 @@ def checkKeyzFile() -> None:
     exit()
 
 
+
+def accessGet(variable:ACCESSES) -> str|None:
+    return access('get', variable)
+
+def accessSet(variable:ACCESSES, to:str) -> None:
+    access('set', variable, to)
+
+def accessDel(variable:ACCESSES) -> None:
+    access('del', variable)
+
+def openSettings():
+    import settings
+
+def isKeyPressedNow(key: Literal['shiftL', 'cmdL', 'cmdR', 'altL', 'altR', 'ctrlL', 'ctrlR', 'caps', 'fn']) -> bool:
+    map = {"shiftL": 56, "cmdL": 55, "cmdR": 54, "altL": 58, "altR": 61, "ctrlL": 59, "ctrlR": 62, "caps": 57, "fn": 63}
+    return Quartz.CGEventSourceKeyState(Quartz.kCGEventSourceStateHIDSystemState, map[key]) # type: ignore
+
+
+
 def main():
+    if isKeyPressedNow('shiftL') and isKeyPressedNow('ctrlL'):
+        openSettings()
     pyperclip.copy("")
     screenshot: str = getScreenshot()
 
