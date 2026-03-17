@@ -9,6 +9,7 @@ from openai.types.chat import ChatCompletion
 from typing import Literal
 from threading import Thread
 from pynput.keyboard import Key, Controller
+from pynput.mouse import Controller as MouseController
 import time
 
 
@@ -41,6 +42,10 @@ autoSubmitAnswer: int|bool = 1 # macos only
 loopSolving: int|bool = 1
 
 bypassCheckKeyz = False
+
+# with caution; to stop the loop put mouse in left upper corner
+autoScreenshot: int|bool = 1 # whole display screenshot
+
 
 currentDir = os.path.dirname(os.path.abspath(__file__))
 
@@ -105,7 +110,10 @@ def _takeScreenshot(screenPath: str) -> str:
     """
     Directly takes a screenshot and returns it as a base64 string
     """
-    subprocess.run(["screencapture", "-i", screenPath], check=True)
+    if autoScreenshot:
+        subprocess.run(["screencapture", "-x", screenPath], check=True)
+    else:
+        subprocess.run(["screencapture", "-i", screenPath], check=True)
 
     with open(screenPath, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
@@ -135,7 +143,7 @@ def solve(image: str):
             "content": [
             {
                 "type": "text",
-                "text": "Реши задачу на фото. Строго запрещено использовать LaTeX math mode. В конце напиши \"Ответ: <ответ>\". Если дробь возможно сделать десятичной -  сделай. ЕСЛИ НА КАРТИНКЕ НАПИСАНО 'ТРЕНИНГ' ТО В КОНЦЕ ОТВЕТА ДОБАВЬ !, например: Ответ: 29!"
+                "text": f"Реши задачу на фото. Строго запрещено использовать LaTeX math mode. {'Если задач несколько, решай ту, около которой в поле ответа выделен курсор (окошко ввода ответа синее)' if autoScreenshot else ''} В конце напиши \"Ответ: <ответ>\". Если дробь возможно сделать десятичной -  сделай. ЕСЛИ НА КАРТИНКЕ НАПИСАНО 'ТРЕНИНГ' ТО В КОНЦЕ ОТВЕТА ДОБАВЬ !, например: Ответ: 29!"
             },
             {
                 "type": "image_url",
@@ -245,14 +253,18 @@ def main():
                     keyboard.press(Key.tab)
                     keyboard.release(Key.tab)
                 
-
-        renderOutput(solution, title=makeTitle(response))
+        if not autoSubmitAnswer:
+            renderOutput(solution, title=makeTitle(response))
     
 if __name__ == "__main__":
     if not bypassCheckKeyz:
         checkKeyzFile()
     if loopSolving:
         while True:
+            mouseNow = MouseController().position
+            if autoScreenshot:
+                if mouseNow[0] < 5 and mouseNow[1] < 5: # exit if mouse in left upper corner
+                    break
             main()
     else:
         main()
