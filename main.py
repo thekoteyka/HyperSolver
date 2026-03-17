@@ -8,8 +8,8 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletion
 from typing import Literal
 from threading import Thread
-import pyautogui
-
+from pynput.keyboard import Key, Controller
+import time
 
 
 """
@@ -34,10 +34,11 @@ reasoningEfforts = Literal[
 
 
 selectedModel: modelsAvailable   = '3 flash'
-reasoningLevel: reasoningEfforts = 'high'
-closingDelay: int = 20   # seconds
-soundWhenDone: bool = True # macos only
-autoSubmitAnswer: bool = True # macos only
+reasoningLevel: reasoningEfforts = 'minimal'
+closingDelay: int = 1   # seconds
+soundWhenDone: int|bool = True # macos only
+autoSubmitAnswer: int|bool = 1 # macos only
+loopSolving: int|bool = 1
 
 bypassCheckKeyz = False
 
@@ -97,7 +98,7 @@ def getScreenshot() -> str:
         exit()
     except Exception as e:
         print(f"Error taking screenshot:\n{e}")
-        renderOutput(str(e), customClosingDelay=45, title="Error")
+        # renderOutput(str(e), customClosingDelay=45, title="Error")
         exit()
 
 def _takeScreenshot(screenPath: str) -> str:
@@ -134,7 +135,7 @@ def solve(image: str):
             "content": [
             {
                 "type": "text",
-                "text": "Реши задачу на фото. Строго запрещено использовать LaTeX math mode. В конце напиши \"Ответ: <ответ>\". Если дробь возможно сделать десятичной -  сделай"
+                "text": "Реши задачу на фото. Строго запрещено использовать LaTeX math mode. В конце напиши \"Ответ: <ответ>\". Если дробь возможно сделать десятичной -  сделай. ЕСЛИ НА КАРТИНКЕ НАПИСАНО 'ТРЕНИНГ' ТО В КОНЦЕ ОТВЕТА ДОБАВЬ !, например: Ответ: 29!"
             },
             {
                 "type": "image_url",
@@ -208,20 +209,50 @@ def main():
     if solution is not None:
         if solution.endswith('.'):
             solution = solution[:-1]
+        trening = False
+        if solution.endswith('!'):
+            solution = solution[:-1]
+            trening = True
         copyAnswer(solution)
         if soundWhenDone and getSystem() == "macos":
             os.system('afplay /System/Library/Sounds/Tink.aiff')
         if autoSubmitAnswer and getSystem() == "macos":
-            pyautogui.keyDown('command')
-            pyautogui.sleep(0.1)
-            pyautogui.press('v')
-            pyautogui.keyUp('command')
-            pyautogui.press('tab')
-            pyautogui.press('space')
+            keyboard = Controller()
+            with keyboard.pressed(Key.cmd):
+                keyboard.press('v')
+                keyboard.release('v')
+            
+            for i in range(2 if trening else 1):
+                time.sleep(0.1)
+                keyboard.press(Key.tab)
+                keyboard.release(Key.tab)
+                
+                time.sleep(0.1)
+                keyboard.press(Key.space)
+                keyboard.release(Key.space)
+            
+            time.sleep(0.4)
+            if trening:
+                with keyboard.pressed(Key.shift_l):
+                    keyboard.press(Key.tab)
+                    keyboard.release(Key.tab)
+
+                    keyboard.press(Key.tab)
+                    keyboard.release(Key.tab)
+            else:
+                for i in range(5):
+                    # time.sleep(0.1)
+                    keyboard.press(Key.tab)
+                    keyboard.release(Key.tab)
+                
 
         renderOutput(solution, title=makeTitle(response))
     
 if __name__ == "__main__":
     if not bypassCheckKeyz:
         checkKeyzFile()
-    main()
+    if loopSolving:
+        while True:
+            main()
+    else:
+        main()
