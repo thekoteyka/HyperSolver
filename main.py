@@ -254,7 +254,8 @@ def accessDel(variable:ACCESSES) -> None:
     access('del', variable)
 
 def openSettings():
-    import settings
+    from settings import openSettingsApp
+    openSettingsApp()
 
 def isKeyPressedNow(key: Literal['shiftL', 'cmdL', 'cmdR', 'altL', 'altR', 'ctrlL', 'ctrlR', 'caps', 'fn']) -> bool:
     map = {"shiftL": 56, "cmdL": 55, "cmdR": 54, "altL": 58, "altR": 61, "ctrlL": 59, "ctrlR": 62, "caps": 57, "fn": 63}
